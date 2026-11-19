@@ -36,7 +36,7 @@ func allocateHeap() {
 
 	// locate runtime heap offset within UEFI memory allocation
 	for _, desc := range memoryMap.Descriptors {
-		if desc.Type == uefi.EfiLoaderCode && desc.PhysicalStart == ramStart {
+		if desc.Type == uefi.EfiLoaderCode && desc.PhysicalStart <= ramStart && ramStart < desc.PhysicalEnd() {
 			heapStart = desc.PhysicalEnd()
 			break
 		}
@@ -44,6 +44,11 @@ func allocateHeap() {
 
 	if heapStart == 0 {
 		fmt.Println("WARNING: could not find heap offset")
+	}
+
+	if heapStart >= ramEnd {
+		// the image already covers the runtime memory
+		return
 	}
 
 	if err := UEFI.Boot.AllocatePages(
